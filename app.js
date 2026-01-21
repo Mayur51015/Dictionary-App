@@ -6,11 +6,9 @@
 /* ============================================
    CONFIGURATION & CONSTANTS
    ============================================ */
-// API-Ninjas Dictionary API (via RapidAPI)
+// Free Dictionary API (No API key required!)
 const CONFIG = {
-    API_URL: 'https://dictionary-by-api-ninjas.p.rapidapi.com/v1/dictionary?word=',
-    API_KEY: 'b78c158a9amshdc489482b936a0bp152b3bjsn74a6d3d1c7c6',
-    API_HOST: 'dictionary-by-api-ninjas.p.rapidapi.com',
+    API_URL: 'https://api.dictionaryapi.dev/api/v2/entries/en/',
     DEBOUNCE_DELAY: 500,
     CACHE_DURATION: 3600000,
     MAX_CACHE_SIZE: 50
@@ -145,65 +143,26 @@ const APIService = {
         }
 
         try {
-            const response = await fetch(`${CONFIG.API_URL}${encodeURIComponent(word)}`, {
-                method: 'GET',
-                headers: {
-                    'X-RapidAPI-Key': CONFIG.API_KEY,
-                    'X-RapidAPI-Host': CONFIG.API_HOST
-                }
-            });
+            const response = await fetch(`${CONFIG.API_URL}${encodeURIComponent(word)}`);
 
             if (!response.ok) {
                 if (response.status === 404) {
                     throw new Error('Word not found. Please check your spelling and try again.');
-                }
-                if (response.status === 403) {
-                    throw new Error('API key invalid or rate limit exceeded. Please check your RapidAPI subscription.');
                 }
                 throw new Error('Network error. Please check your connection and try again.');
             }
 
             const data = await response.json();
 
-            // Transform API-Ninjas response to match expected format
-            const transformedData = this.transformApiNinjasResponse(data, word);
-
-            CacheManager.set(word, transformedData);
-            return transformedData;
+            // Free Dictionary API returns data in the correct format already
+            CacheManager.set(word, data);
+            return data;
         } catch (error) {
             if (error.message.includes('Failed to fetch')) {
                 throw new Error('Unable to connect to the dictionary service. Please check your internet connection.');
             }
             throw error;
         }
-    },
-
-    /**
-     * Transform API-Ninjas response to match app's expected format
-     * @param {Object} ninjaData - API-Ninjas response
-     * @param {string} word - The searched word
-     * @returns {Array} Transformed data
-     */
-    transformApiNinjasResponse(ninjaData, word) {
-        // API-N injas returns: { word, definition, valid }
-        if (!ninjaData.valid || !ninjaData.definition) {
-            return [];
-        }
-
-        return [{
-            word: ninjaData.word || word,
-            phonetic: '',
-            phonetics: [],
-            meanings: [{
-                partOfSpeech: 'definition',
-                definitions: [{
-                    definition: ninjaData.definition,
-                    example: '',
-                    synonyms: []
-                }],
-                synonyms: []
-            }]
-        }];
     }
 
 
